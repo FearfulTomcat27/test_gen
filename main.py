@@ -1,3 +1,5 @@
+from langsmith.wrappers import wrap_openai
+
 from prompt import agent_coder_prompt
 from utils import read_problems, write_jsonl
 from openai import OpenAI
@@ -6,19 +8,26 @@ import os
 import re
 from dotenv import load_dotenv
 from tqdm import tqdm
+from execution import check_correctness
 
 load_dotenv()
 
 
 def remove_think_part(text):
     # 提取回复中的Python 代码块
+
+    # 首先判断是否包含```python
+    if "```python" not in text:
+        return text
+
     pattern = r"```python\n(.*?)\n```"
     match = re.search(pattern, text, re.DOTALL)
     if match:
         cleaned_text = match.group(1).strip()
+        return cleaned_text.strip()
     else:
-        cleaned_text = ""
-    return cleaned_text.strip()
+        # 有```python但正则没匹配到，返回空字符串
+        return "def check(candidate):\n    assert True == False"
 
 
 class NoneTestCasesException(Exception):
@@ -27,11 +36,16 @@ class NoneTestCasesException(Exception):
         super().__init__(self.message)
 
 
-def generate_completion(model: str, prompt: list):
-    client = OpenAI(base_url=os.getenv("OPENAI_BASE_URL"))
+def generate_completion(model: str, prompt: list, enable_thinking: bool = True):
+    client = wrap_openai(OpenAI(base_url=os.getenv("OPENAI_BASE_URL")))
     try:
-        response = client.chat.completions.create(model=model, messages=prompt)
+        response = client.chat.completions.create(
+            model=model,
+            messages=prompt,
+            extra_body={"chat_template_kwargs": {"enable_thinking": enable_thinking}},
+        )
         completion = response.choices[0].message.content
+        return completion
     except (
         AuthenticationError,
         RateLimitError,
@@ -39,30 +53,13 @@ def generate_completion(model: str, prompt: list):
         InternalServerError,
     ) as e:
         print(f"OpenAI API Error: {e}")
-        completion = ""
         raise NoneTestCasesException
     except Exception as e:
         print(f"Unexpected error: {e}")
-        completion = ""
         raise NoneTestCasesException
-    finally:
-        return completion
 
 
-def check_correction(check_program: str):
-    status_code = -1
-    try:
-        exec(check_program)
-        status_code = 0
-    except BaseException as e:
-        print(f"Test Code:\n{check_program}")
-        print(f"Test execution erro : {e}")
-        status_code = 1
-    finally:
-        return status_code
-
-
-def process_problems(problems: dict, model: str):
+def process_problems(problems: dict, model: str, enable_thinking: bool = True):
     # 成功通过的用例
     passed_generate_test = []
     # 成功生成但不通过的用例
@@ -78,26 +75,16 @@ def process_problems(problems: dict, model: str):
 
         try:
             completion = generate_completion(
-                model, [{"role": "user", "content": prompt}]
+                model, [{"role": "user", "content": prompt}], enable_thinking
             )
             if completion:
                 test_cases = remove_think_part(completion)
-                check_program = (
-                    problem["prompt"]
-                    + problem["canonical_solution"]
-                    + "\n"
-                    + test_cases
-                    + "\n"
-                    + f"check({problem['entry_point']})"
-                )
-                status_code = check_correction(check_program)
-                if status_code == 0:
-                    print(f"Test passed for {task_id}")
+                result = check_correctness(problem, test_cases)
+                if result["passed"]:
                     passed_generate_test.append(
                         {"task_id": task_id, "test_cases": test_cases}
                     )
                 else:
-                    print(f"Test failed for {task_id}")
                     failed_generate_test.append(
                         {"task_id": task_id, "test_cases": test_cases}
                     )
@@ -117,11 +104,12 @@ def process_problems(problems: dict, model: str):
 
 def main():
     problems = read_problems()
-    # model = "qwen/qwen3-8b:free"
-    model = "Qwen/Qwen3-8B"
+    # model = "Qwen/Qwen3-8B"
+    enable_thinking = True
+    model = "gpt-5-2025-08-07"
     # 限制 problems 数量为前 10 个
-    problems = dict(list(problems.items())[:2])
-    process_problems(problems, model)
+    # problems = dict(list(problems.items())[:2])
+    process_problems(problems, model, enable_thinking)
 
 
 if __name__ == "__main__":

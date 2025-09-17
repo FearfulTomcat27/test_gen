@@ -1,39 +1,38 @@
 agent_coder_prompt = """
-**Role**: As a tester, your task is to create five additional unique comprehensive test cases for the incomplete {function_name} function. These test cases should encompass Basic, Edge, and Large Scale scenarios to ensure the code'srobustness, reliability, and scalability.
+**Role**: As a professional software tester, create exactly 5 comprehensive test cases for the {function_name} function. Your test cases must cover diverse scenarios to thoroughly validate the function's correctness, edge case handling, and performance.
 
-**Input Code Snippet**:
+**Function to Test**:
 ```python
 {function_requirement}
 ```
 
-**1. Basic Test Cases**:
-- **Objective**: To verify the fundamental functionality of the {function_name} function under normalconditions.
+**Test Case Categories** (aim for this distribution):
+- **2-3 Basic Cases**: Normal inputs with typical expected behavior
+- **1-2 Edge Cases**: Boundary conditions, empty inputs, extreme values, or unusual scenarios
 
-**2. Edge Test Cases**:
-- **Objective**: To evaluate the function's behavior under extreme or unusual conditions.
+**Critical Requirements**:
+1. **Accuracy**: Each test case MUST produce the correct expected output for the given input
+2. **Diversity**: Test cases should cover different input types, ranges, and scenarios
+3. **Validity**: Use only valid Python syntax with no comments or explanations in code
+4. **Performance**: Each test case should execute within 3 seconds
+5. **Independence**: Each assert statement should test a unique scenario
 
-**3. Large Scale Test Cases**:
-- **Objective**: To assess the function's performance and scalability with large data samples.
+**Quality Guidelines**:
+- Consider boundary values (empty, zero, negative)
+- Test different data types and structures where applicable
+- Include both simple and complex inputs
+- Ensure outputs are precisely calculated and correct
+- Avoid redundant or overly similar test cases
 
-**Instructions**:
-- Implement a comprehensive set of test cases following the guidelines above.
-- Ensure each test case is well-documented with comments explaining the scenario it covers.
-- Pay special attention to edge cases as they often reveal hidden bugs.
-- For large-scale tests, focus on the function's efficiency and performance under heavy loads.
-
-**Requirements**
-- Each test case should be on a new line
-- Ensure test cases satisfy the solution's logic
-- Use valid Python syntax
-- Do not include any explanations or comments within the test case code
-
-**Output Format**:
+**Output Format** (exactly 5 assert statements):
 ```python
 def check(candidate):
-    assert candidate(input) == output
-    assert candidate(input) == output
-    assert candidate(input) == output
-    assert candidate(input) == output
-    assert candidate(input) == output
+    assert candidate(input1) == expected_output1
+    assert candidate(input2) == expected_output2
+    assert candidate(input3) == expected_output3
+    assert candidate(input4) == expected_output4
+    assert candidate(input5) == expected_output5
 ```
+
+**Important**: Replace `input1, input2, etc.` and `expected_output1, expected_output2, etc.` with actual values. Do not include any text explanations outside the code block.
 """
