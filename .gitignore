@@ -1,8 +1,6 @@
-failed_generate_test.jsonl
+*.jsonl
 
-generate_fail_id.jsonl
-
-pass_generate_test.jsonl
+test/
 
 .env
 
